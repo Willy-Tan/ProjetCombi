@@ -1,3 +1,5 @@
+import math
+
 class AbstractRule():
     """
     Classe abstraite pour tous les ensembles engendrés par une grammaire.
@@ -14,6 +16,9 @@ class AbstractRule():
 
     def set_grammar(self, gramm):
         self._gram = gramm
+
+    def count(self, n):
+        return 0
 
 class ConstantRule(AbstractRule):
     """
@@ -48,7 +53,12 @@ class SingletonRule(ConstantRule):
             - x, une étiquette
         """
         return self._fun(x)
-
+    
+    def count(self, n):
+        if (n == 1):
+            return 1
+        else:
+            return 0
 
 class EpsilonRule(ConstantRule):
     """
@@ -70,7 +80,12 @@ class EpsilonRule(ConstantRule):
 
     def __repr__(self):
         return "Epsilon " + str(self.obj())
-
+    
+    def count(self, n):
+        if (n == 0):
+            return 1
+        else:
+            return 0
 
 class ConstructorRule(AbstractRule):
     """
@@ -108,7 +123,10 @@ class UnionRule(ConstructorRule):
 
     def __repr__(self):
         return "Union of " + str(self._parameters)
-
+    
+    def count(self, n):
+        fst,snd = self.parameters()
+        return self._gram[fst].count(n) + self._gram[snd].count(n)
 
 class AbstractProductRule(ConstructorRule):
     """
@@ -137,7 +155,14 @@ class OrdProdRule(AbstractProductRule):
     """
     def __repr__(self):
         return "Ordered Product of " + str(self.parameters())
-
+    
+    def count(self, n):
+        result = 0
+        fst,snd = self.parameters()
+        val = self.valuation()
+        for k in range(val, n+1):
+            result += self._gram[fst].count(k) * self._gram[snd].count(n-k)
+        return result
 
 class ProductRule(AbstractProductRule):
     """
@@ -146,9 +171,18 @@ class ProductRule(AbstractProductRule):
 
     def __repr__(self):
         return "Product of " + str(self.parameters())
-
-
-
+    
+    def count(self, n):
+        result = 0
+        fst,snd = self.parameters()
+        val = self.valuation()
+        for k in range(val, n+1):
+            nn = math.factorial(n)
+            a = math.factorial(k)
+            b = math.factorial(n-k)
+            result += (nn // (a*b)) * self._gram[fst].count(k) * self._gram[snd].count(n-k)
+        return result
+        
 class BoxProdRule(AbstractProductRule):
     """
     Représente un ensemble produit de deux autres ensembles avec plus petit
@@ -157,11 +191,19 @@ class BoxProdRule(AbstractProductRule):
 
     def __repr__(self):
         return "Boxed Product of " + str(self.parameters())
-
-
-
-
-
+    
+    def count(self, n):
+        result = 0
+        fst,snd = self.parameters()
+        val = self.valuation() if self.valuation() > 0 else 1
+        for k in range(val, n+1):
+            nn = math.factorial(n-1)
+            a = math.factorial(k-1)
+            b = math.factorial(n-k)
+            result += (nn / (a*b)) * self._gram[fst].count(k) * self._gram[snd].count(n-k)
+        return result
+        
+        
 def save_grammar(gram):
     """
     Parcourt les ensembles de la grammaires et leur associe le dictionnaire (clé, ensemble)
@@ -169,8 +211,8 @@ def save_grammar(gram):
     Input :
         - gram, une grammaire donnée sous forme d'un dictionnaire
     """
-    for obj in gram:
-        obj.set_grammar(gram)
+    for key in gram:
+        gram[key].set_grammar(gram)
     return gram
 
 
@@ -182,9 +224,9 @@ def check_grammar(gram):
     appartiennent bien au dictionnaire de la grammaire.
     """
     result = True
-    for obj in gram:
-        if isinstance(obj, ConstructorRule):
-            for j in obj._gram:
+    for key in gram:
+        if isinstance(gram[key], ConstructorRule):
+            for j in gram[key]._gram:
                 if (not j in gram):
                     result = False
     return result
@@ -201,6 +243,10 @@ def init_grammar(gram):
     """
     gram = save_grammar(gram)
     if (check_grammar(gram)):
-        v = 0
+        """
+            Pour les tests, à enlever quand la valuation aura été implémenté
+        """
+        for key in gram:
+            gram[key]._valuation = 1
     else:
         raise NotImplementedError
