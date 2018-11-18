@@ -231,6 +231,47 @@ def check_grammar(gram):
                     result = False
     return result
 
+
+def calc_valuation(gram):
+    """
+    Fonction auxiliaire à init_grammar.
+    
+     * Prend en argument la grammaire dont on veut calculer la valuation,
+     * Applique ensuite le calcul de la valuation de manière récursive en 3.1. 
+     * L'algorithme termine dès que le calcul renvoie les mêmes valeurs que
+       l'appel précédent.
+    """
+    flag = False            #Levé dès que la nouvelle val. diffère de la précédente
+    
+    for key in gram:        #Parcours des éléments de la grammaire
+        
+        #Si non-terminal :
+        if isinstance(gram[key], ConstructorRule):
+            #on récupère N1 et N2...
+            fst, snd = gram[key].parameters()       
+    
+            #S'il s'agit d'une union, la valuation est le min entre val(N1) et val(N2)
+            if isinstance(gram[key], UnionRule):
+                val = min(gram[fst].valuation(), gram[snd].valuation())
+                
+            #S'il s'agit d'un produit, la valuation est la somme entre val(N1) et val(N2)
+            elif isinstance(gram[key], AbstractProductRule):
+                val = gram[fst].valuation() + gram[snd].valuation()
+            
+                            
+            #Si la nouvelle valuation diffère, on lève le drapeau et on actualise
+            if val != gram[key].valuation():
+                flag = True
+                gram[key]._valuation = val
+    
+    if flag:
+        calc_valuation(gram)
+    
+    
+            
+                
+    
+
 def init_grammar(gram):
     """
      * Utilise la fonction save_grammar pour enregistrer la grammaire au
@@ -241,12 +282,43 @@ def init_grammar(gram):
     Input :
         - gram, une grammaire donnée sous forme d'un dictionnaire clé - ensembles
     """
+    
     gram = save_grammar(gram)
+
     if (check_grammar(gram)):
-        """
-            Pour les tests, à enlever quand la valuation aura été implémenté
-        """
+  
+        #Évaluation de V0
+        for key in gram:                                
+            if isinstance(gram[key], SingletonRule):    #Les singletons valent 1
+                gram[key]._valuation = 1
+            elif isinstance(gram[key],EpsilonRule):     #Les Epsilon valent 0   
+                gram[key]._valuation = 0
+            else:                                       #Tous les autres sont initialisés à +inf
+                gram[key]._valuation = math.inf
+            
+        #Évaluation de V1
         for key in gram:
-            gram[key]._valuation = 1
+            #On a déjà calculé pour les singleton/epsilon, on regarde les autres
+            if isinstance(gram[key], ConstructorRule):
+                fst, snd = gram[key].parameters()       #On récupère N1 et N2
+                
+                #S'il s'agit d'une union, val = min(val(N1), val(N2))
+                if isinstance(gram[key], UnionRule):
+                    gram[key]._valuation = min(gram[fst].valuation(), gram[snd].valuation())
+                
+                #S'il s'agit d'un produit cartésien, val = val(N1) + val(N2)
+                elif isinstance(gram[key], AbstractProductRule):
+                    gram[key]._valuation = gram[fst].valuation() + gram[snd].valuation()
+        
+        
+        #Appel à calc_valuation qui effectue le tout de manière récursive
+        calc_valuation(gram)
+        
+        #Vérification que chaque non-terminal a une valuation != inf
+        for key in gram:
+            if (gram[key].valuation() == math.inf):
+                raise NotImplementedError
+        
+
     else:
         raise NotImplementedError
