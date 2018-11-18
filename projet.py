@@ -1,5 +1,24 @@
 import math
 
+def binomial(n,k):
+    """
+    Fonction auxiliaire pour calculer un coefficient binomial.
+    On peut voir le coefficient binomial comme :
+    - au numérateur, n-k termes : n!/k! = (k+1) x (k+2) x ... x n
+    - au dénominateur, n-k termes : (n-k)! = 1 x 2 x .... x (n - k)!   
+    """
+    
+    if 0 <= k <= n:
+        num = 1
+        den = 1
+        for i in range(1, n-k+1):
+            num *= n-i+1
+            den *= i
+    
+    return n//k
+
+            
+
 class AbstractRule():
     """
     Classe abstraite pour tous les ensembles engendrés par une grammaire.
@@ -54,11 +73,22 @@ class SingletonRule(ConstantRule):
         """
         return self._fun(x)
     
+    def valuation(self):
+        return 1
+    
     def count(self, n):
         if (n == 1):
             return 1
         else:
             return 0
+            
+    def list(self, l):
+        if len(l) != 1:
+            return []
+        else:
+            return [self.fun(l[0])]
+        
+        
 
 class EpsilonRule(ConstantRule):
     """
@@ -81,11 +111,20 @@ class EpsilonRule(ConstantRule):
     def __repr__(self):
         return "Epsilon " + str(self.obj())
     
+    def valuation(self):
+        return 0
+    
     def count(self, n):
         if (n == 0):
             return 1
         else:
             return 0
+    
+    def list(self,l):
+        if len(l) != 0:
+            return []
+        else:
+            return [self.obj()]
 
 class ConstructorRule(AbstractRule):
     """
@@ -123,6 +162,10 @@ class UnionRule(ConstructorRule):
 
     def __repr__(self):
         return "Union of " + str(self._parameters)
+
+    def _calc_valuation(self):
+        fst, snd = self.parameters()
+        return min(self._gram[fst].valuation(), self._gram[snd].valuation())
     
     def count(self, n):
         fst,snd = self.parameters()
@@ -144,6 +187,10 @@ class AbstractProductRule(ConstructorRule):
         ConstructorRule.__init__(self,(key1,key2))
         self._cons = cons
 
+    def _calc_valuation(self):
+        fst, snd = self.parameters()
+        return self._gram[fst].valuation() + self._gram[snd].valuation()
+
     def construct(self, obj1, obj2):
         return self._cons(*(obj1,obj2))
 
@@ -157,11 +204,18 @@ class OrdProdRule(AbstractProductRule):
         return "Ordered Product of " + str(self.parameters())
     
     def count(self, n):
+        #Si n est plus grand que la valuation de la règle, pas d'objet possible
+        if n > self.valuation():
+            return 0
         result = 0
         fst,snd = self.parameters()
-        val = self.valuation()
-        for k in range(val, n+1):
-            result += self._gram[fst].count(k) * self._gram[snd].count(n-k)
+        fstVal = self._gram[fst].valuation()    #V(N1)
+        sndVal = self._gram[snd].valuation()    #V(N2)
+        
+        #On ne considère que les termes où k >= V(N1) et n-k >= V(N2)
+        for k in range(fstVal, n+1):
+            if (n - k) >= sndVal:
+                result += self._gram[fst].count(k) * self._gram[snd].count(n-k)
         return result
 
 class ProductRule(AbstractProductRule):
@@ -173,14 +227,19 @@ class ProductRule(AbstractProductRule):
         return "Product of " + str(self.parameters())
     
     def count(self, n):
+        #Si n est plus grand que la valuation de la règle, pas d'objet possible
+        if n > self.valuation():
+            return 0
+
         result = 0
         fst,snd = self.parameters()
-        val = self.valuation()
-        for k in range(val, n+1):
-            nn = math.factorial(n)
-            a = math.factorial(k)
-            b = math.factorial(n-k)
-            result += (nn // (a*b)) * self._gram[fst].count(k) * self._gram[snd].count(n-k)
+        fstVal = self._gram[fst].valuation()    #V(N1)
+        sndVal = self._gram[snd].valuation()    #V(N2)
+        
+        #On ne considère que les termes où k >= V(N1) et n-k >= V(N2)
+        for k in range(fstVal, n+1):
+            if (n - k) >= sndVal:
+                result += binomial(n,k) * self._gram[fst].count(k) * self._gram[snd].count(n-k)
         return result
         
 class BoxProdRule(AbstractProductRule):
@@ -193,14 +252,16 @@ class BoxProdRule(AbstractProductRule):
         return "Boxed Product of " + str(self.parameters())
     
     def count(self, n):
+        #Si n est supérieur à la valuation de la règle, pas d'objet possible
+        if n > self.valuation():
+            return 0
+            
         result = 0
         fst,snd = self.parameters()
-        val = self.valuation() if self.valuation() > 0 else 1
+        fstVal = max(1, self._gram[fst].valuation())
+        sndVal = self._gram[snd].valuation()
         for k in range(val, n+1):
-            nn = math.factorial(n-1)
-            a = math.factorial(k-1)
-            b = math.factorial(n-k)
-            result += (nn / (a*b)) * self._gram[fst].count(k) * self._gram[snd].count(n-k)
+            result += binomial(n-1,k-1) * self._gram[fst].count(k) * self._gram[snd].count(n-k)
         return result
         
         
@@ -247,18 +308,8 @@ def calc_valuation(gram):
         
         #Si non-terminal :
         if isinstance(gram[key], ConstructorRule):
-            #on récupère N1 et N2...
-            fst, snd = gram[key].parameters()       
-    
-            #S'il s'agit d'une union, la valuation est le min entre val(N1) et val(N2)
-            if isinstance(gram[key], UnionRule):
-                val = min(gram[fst].valuation(), gram[snd].valuation())
-                
-            #S'il s'agit d'un produit, la valuation est la somme entre val(N1) et val(N2)
-            elif isinstance(gram[key], AbstractProductRule):
-                val = gram[fst].valuation() + gram[snd].valuation()
+            val = gram[key]._calc_valuation()
             
-                            
             #Si la nouvelle valuation diffère, on lève le drapeau et on actualise
             if val != gram[key].valuation():
                 flag = True
@@ -289,30 +340,17 @@ def init_grammar(gram):
   
         #Évaluation de V0
         for key in gram:                                
-            if isinstance(gram[key], SingletonRule):    #Les singletons valent 1
-                gram[key]._valuation = 1
-            elif isinstance(gram[key],EpsilonRule):     #Les Epsilon valent 0   
-                gram[key]._valuation = 0
-            else:                                       #Tous les autres sont initialisés à +inf
+            if isinstance(gram[key], ConstructorRule):
                 gram[key]._valuation = math.inf
             
         #Évaluation de V1
         for key in gram:
-            #On a déjà calculé pour les singleton/epsilon, on regarde les autres
             if isinstance(gram[key], ConstructorRule):
-                fst, snd = gram[key].parameters()       #On récupère N1 et N2
-                
-                #S'il s'agit d'une union, val = min(val(N1), val(N2))
-                if isinstance(gram[key], UnionRule):
-                    gram[key]._valuation = min(gram[fst].valuation(), gram[snd].valuation())
-                
-                #S'il s'agit d'un produit cartésien, val = val(N1) + val(N2)
-                elif isinstance(gram[key], AbstractProductRule):
-                    gram[key]._valuation = gram[fst].valuation() + gram[snd].valuation()
+                gram[key]._valuation = gram[key]._calc_valuation()
         
-        
-        #Appel à calc_valuation qui effectue le tout de manière récursive
+        #Évaluation récursive
         calc_valuation(gram)
+        
         
         #Vérification que chaque non-terminal a une valuation != inf
         for key in gram:
