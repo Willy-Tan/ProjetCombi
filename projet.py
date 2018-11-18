@@ -56,6 +56,11 @@ class AbstractRule():
 
     def count(self, n):
         return 0
+    
+    def unrank(self, S, i):
+        if (i <= self.count(len(S))):
+            raise ValueError
+        
 
 class ConstantRule(AbstractRule):
     """
@@ -65,8 +70,10 @@ class ConstantRule(AbstractRule):
 
     def degree(self):
         raise NonImplementedError
-
-
+    
+    def unrank(self, S, i):
+        AbstractRule.unrank(self, S, i)
+        return S
 
 class SingletonRule(ConstantRule):
     """
@@ -188,6 +195,16 @@ class UnionRule(ConstructorRule):
     def count(self, n):
         fst,snd = self.parameters()
         return self._gram[fst].count(n) + self._gram[snd].count(n)
+    
+    def unrank(self, S, i):
+        AbstractRule.unrank(self, S, i)
+        fst,snd = self.parameters()
+        a = self._gram[fst]
+        b = self._gram[snd]
+        if (i < a.count(len(S))):
+            return a.unrank(S, i)
+        else:
+            return b.unrank(S, a.count(len(S)) - i)
 
     def list(self, l):
         fst, snd = self.parameters()
@@ -211,6 +228,7 @@ class AbstractProductRule(ConstructorRule):
         """
         ConstructorRule.__init__(self,(key1,key2))
         self._cons = cons
+        self._valProd = 0
 
     def _calc_valuation(self):
         fst, snd = self.parameters()
@@ -221,7 +239,6 @@ class AbstractProductRule(ConstructorRule):
     
     def iter_label(self,l,k):
         yield [],[]
-    
         
     def list(self,l):
         objects = []
@@ -235,6 +252,46 @@ class AbstractProductRule(ConstructorRule):
                     for e2 in self._gram[snd].list(right):
                         objects.append(self.construct(e1,e2))
         return objects
+        
+    def valProd(self, i, j):
+        return 1
+    
+    def iter_label(self, S, nb):
+        return [(1,2), (2,3)]
+    
+    def unrank(self, S, i):
+        AbstractRule.unrank(self, S, i)
+        fst,snd = self.parameters()
+        s_min = 0
+        s_max = 0
+        r = 0
+        """
+        Calcul de l'indice i tel que S_i <= r < S_i+1
+        """
+        while(True):
+            if (s_min <= i and i < s_max):
+                break
+            else:
+                r += 1
+                S_r = 0
+                n = len(S)
+                for j in range(r):
+                    S_r += self.valProd(n, j) * self._gram[fst].count(j) * self._gram[snd].count(n-j)
+                s_min = s_max
+                s_max = S_r
+        r = r - 1
+        """
+        Calcul de la répartition des étiquettes entre A et B
+        """
+        r2 = i - s_min
+        nbSol = self._gram[fst].count(r) * self._gram[snd].count(n-r)
+        qE = r2 // nbSol
+        rE = r2 % nbSol
+        nG = self._gram[snd].count(n-r)
+        F,G = list(self.iter_label(S, r))[qE]
+        Q = rE // nG
+        R = rE % nG
+        return self._cons(self._gram[fst].unrank(F, Q), self._gram[snd].unrank(G, R))
 
 
 class OrdProdRule(AbstractProductRule):
@@ -254,6 +311,10 @@ class OrdProdRule(AbstractProductRule):
         for k in range(fstVal, n-sndVal+1):
                 result += self._gram[fst].count(k) * self._gram[snd].count(n-k)
         return result
+    
+    def valProd(self, i, j):
+        return 1
+    
 
     def iter_label(self, l, k):
         """
@@ -283,8 +344,13 @@ class ProductRule(AbstractProductRule):
         for k in range(fstVal, n-sndVal+1):
             result += binomial(n,k) * self._gram[fst].count(k) * self._gram[snd].count(n-k)
         return result
-        
     
+    def valProd(self, i, j):
+        n = math.factorial(i)
+        k = math.factorial(j)
+        l = math.factorial(i-j)
+        return (n // (k * l))
+        
     def iter_label(self,l, k):
         """
         Renvoie les découpages de la liste l en k éléments d'un côté et n - k de l'autre.
@@ -349,10 +415,13 @@ class BoxProdRule(AbstractProductRule):
                 right = indices[k-1:]
                 #On n'oublie pas d'ajouter le plus petit élément à gauche
                 yield [l[mini]]+[l[x] for x in left], [l[x] for x in right]
-    
+        
+    def valProd(self, i, j):
+        n = math.factorial(i-1)
+        k = math.factorial(j-1)
+        l = math.factorial(i-j)
+        return (n // (k * l)) 
 
-        
-        
 def save_grammar(gram):
     """
     Parcourt les ensembles de la grammaires et leur associe le dictionnaire (clé, ensemble)
@@ -363,9 +432,6 @@ def save_grammar(gram):
     for key in gram:
         gram[key].set_grammar(gram)
     return gram
-
-
-
 
 def check_grammar(gram):
     """
@@ -379,7 +445,6 @@ def check_grammar(gram):
                 if (not j in gram):
                     result = False
     return result
-
 
 def calc_valuation(gram):
     """
@@ -406,11 +471,6 @@ def calc_valuation(gram):
     if flag:
         calc_valuation(gram)
     
-    
-            
-                
-    
-
 def init_grammar(gram):
     """
      * Utilise la fonction save_grammar pour enregistrer la grammaire au
@@ -448,3 +508,8 @@ def init_grammar(gram):
 
     else:
         raise NotImplementedError
+    
+Perm = ProductRule("oui", "non", lambda x,y: x+y)
+
+t = lambda t1,t2: t1+t2
+print(t(1,2))
