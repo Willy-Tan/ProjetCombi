@@ -200,10 +200,13 @@ CycleSeq = {
 
 init_grammar(CycleSeq)
 
-
 assert CycleSeq["Cycle"].count(0) == 1
 assert CycleSeq["Cycle"].count(1) == 1
 assert CycleSeq["Cycle"].count(2) == 1
 assert CycleSeq["Cycle"].count(3) == 2
 assert CycleSeq["Cycle"].count(4) == 6
 assert CycleSeq["Cycle"].count(5) == 24
+
+assert CycleSeq["Cycle"].list([]) == [[]]
+assert CycleSeq["Cycle"].list(["a","b"]) == [["a","b"]]
+assert CycleSeq["Cycle"].list([0,1,2,3]) == [[0,1,2,3],[0,1,3,2],[0,2,1,3],[0,2,3,1],[0,3,1,2],[0,3,2,1]]
