@@ -229,3 +229,22 @@ assert SortedBinaryTree["Tree"].count(2) == 1
 assert SortedBinaryTree["Tree"].count(3) == 2
 assert SortedBinaryTree["Tree"].count(4) == 5
 assert SortedBinaryTree["Tree"].count(5) == 14
+
+### Arbres binaires croissants
+
+
+IncreasingBinaryTree = {
+    "Tree" : UnionRule("Node", "Leaf"),
+    "Node" : OrdProdRule("Label","Subtrees", lambda l,t: Node(t[0],t[1],l)),
+    "Label" : SingletonRule(lambda x:x),
+    "Subtrees" : ProductRule("Tree","Tree", lambda t1,t2: (t1,t2)),
+    "Leaf" : EpsilonRule(Leaf())
+}
+
+init_grammar(IncreasingBinaryTree)
+assert IncreasingBinaryTree["Tree"].count(0) == 1
+assert IncreasingBinaryTree["Tree"].count(1) == 1
+assert IncreasingBinaryTree["Tree"].count(2) == 2
+assert IncreasingBinaryTree["Tree"].count(3) == 6
+assert IncreasingBinaryTree["Tree"].count(4) == 24
+assert IncreasingBinaryTree["Tree"].count(5) == 120
