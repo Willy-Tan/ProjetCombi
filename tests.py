@@ -260,7 +260,7 @@ assert IncreasingBinaryTree["Tree"].count(3) == 6
 assert IncreasingBinaryTree["Tree"].count(4) == 24
 assert IncreasingBinaryTree["Tree"].count(5) == 120
 
-### Arbres binaires de recherches
+### Arbres binaires de recherche
 BinarySearchTree = {
     "Tree" : UnionRule("Node", "Leaf"),
     "Node" : OrdProdRule("Tree","RightTree", lambda left,right: Node(left,right[1],right[0])),
