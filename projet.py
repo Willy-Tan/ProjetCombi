@@ -20,7 +20,10 @@ def binomial(n,k):
             num = num * (k+i)
             den *= i
     
-    return num//den
+        return num//den
+    
+    else:
+        return 0
 
 
 def permutations(elements):
@@ -58,7 +61,7 @@ class AbstractRule():
         return 0
     
     def unrank(self, S, i):
-        if (i <= self.count(len(S))):
+        if (i >= self.count(len(S))):
             raise ValueError
         
 
@@ -204,7 +207,7 @@ class UnionRule(ConstructorRule):
         if (i < a.count(len(S))):
             return a.unrank(S, i)
         else:
-            return b.unrank(S, a.count(len(S)) - i)
+            return b.unrank(S, i - a.count(len(S)))
 
     def list(self, l):
         fst, snd = self.parameters()
@@ -253,18 +256,16 @@ class AbstractProductRule(ConstructorRule):
                         objects.append(self.construct(e1,e2))
         return objects
         
-    def valProd(self, i, j):
+    def valProd(self, n, k):
         return 1
-    
-    def iter_label(self, S, nb):
-        return [(1,2), (2,3)]
-    
+        
     def unrank(self, S, i):
         AbstractRule.unrank(self, S, i)
         fst,snd = self.parameters()
         s_min = 0
         s_max = 0
         r = 0
+        n = len(S)
         """
         Calcul de l'indice i tel que S_i <= r < S_i+1
         """
@@ -274,7 +275,6 @@ class AbstractProductRule(ConstructorRule):
             else:
                 r += 1
                 S_r = 0
-                n = len(S)
                 for j in range(r):
                     S_r += self.valProd(n, j) * self._gram[fst].count(j) * self._gram[snd].count(n-j)
                 s_min = s_max
@@ -312,10 +312,9 @@ class OrdProdRule(AbstractProductRule):
                 result += self._gram[fst].count(k) * self._gram[snd].count(n-k)
         return result
     
-    def valProd(self, i, j):
+    def valProd(self, n, k):
         return 1
     
-
     def iter_label(self, l, k):
         """
         Renvoie les découpages de la liste l en k éléments d'un côté et n - k de l'autre
@@ -334,7 +333,6 @@ class ProductRule(AbstractProductRule):
         return "Product of " + str(self.parameters())
     
     def count(self, n):
-        
         result = 0
         fst,snd = self.parameters()
         fstVal = self._gram[fst].valuation()    #V(N1)
@@ -342,14 +340,11 @@ class ProductRule(AbstractProductRule):
         
         #On ne considère que les termes où k >= V(N1) et n-k >= V(N2) (ie k <= n-V(N2))
         for k in range(fstVal, n-sndVal+1):
-            result += binomial(n,k) * self._gram[fst].count(k) * self._gram[snd].count(n-k)
+            result += self.valProd(n,k) * self._gram[fst].count(k) * self._gram[snd].count(n-k)
         return result
     
-    def valProd(self, i, j):
-        n = math.factorial(i)
-        k = math.factorial(j)
-        l = math.factorial(i-j)
-        return (n // (k * l))
+    def valProd(self, n, k):
+        return binomial(n,k)
         
     def iter_label(self,l, k):
         """
@@ -385,17 +380,15 @@ class BoxProdRule(AbstractProductRule):
         return "Boxed Product of " + str(self.parameters())
     
     def count(self, n):
-            
         result = 0
         fst,snd = self.parameters()
         fstVal = max(1, self._gram[fst].valuation())
         sndVal = self._gram[snd].valuation()
         for k in range(fstVal, n-sndVal+1):
-            result += binomial(n-1,k-1) * self._gram[fst].count(k) * self._gram[snd].count(n-k)
+            result += self.valProd(n,k) * self._gram[fst].count(k) * self._gram[snd].count(n-k)
         return result
         
     def iter_label(self,l,k):
-        
         n = len(l)
         if k > n or l == [] or k == 0:
             return
@@ -416,11 +409,8 @@ class BoxProdRule(AbstractProductRule):
                 #On n'oublie pas d'ajouter le plus petit élément à gauche
                 yield [l[mini]]+[l[x] for x in left], [l[x] for x in right]
         
-    def valProd(self, i, j):
-        n = math.factorial(i-1)
-        k = math.factorial(j-1)
-        l = math.factorial(i-j)
-        return (n // (k * l)) 
+    def valProd(self, n, k):
+        return binomial(n-1, k-1)
 
 def save_grammar(gram):
     """
@@ -508,8 +498,3 @@ def init_grammar(gram):
 
     else:
         raise NotImplementedError
-    
-Perm = ProductRule("oui", "non", lambda x,y: x+y)
-
-t = lambda t1,t2: t1+t2
-print(t(1,2))
