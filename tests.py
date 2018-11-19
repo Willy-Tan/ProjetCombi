@@ -186,5 +186,24 @@ assert TreeLabelNodes["Tree"].count(4) == 336 # 14 * 24
 
 assert len(TreeLabelNodes["Tree"].list(["a","b","c"])) == 30
 
+### Séquences cycliques
+
+CycleSeq = {
+    "Cycle": UnionRule("Empty","NonEmptyCycle"),
+    "NonEmptyCycle": BoxProdRule("Letter","Perms", lambda l1,l2: l1+l2),
+    "Perms": UnionRule("Empty","NonEmptyPerms"),
+    "NonEmptyPerms": ProductRule("Letter","Perms",lambda l1,l2: l1+l2),
+    "Letter": SingletonRule(lambda x:[x]),
+    "Empty": EpsilonRule([])
+}
 
 
+init_grammar(CycleSeq)
+
+
+assert CycleSeq["Cycle"].count(0) == 1
+assert CycleSeq["Cycle"].count(1) == 1
+assert CycleSeq["Cycle"].count(2) == 1
+assert CycleSeq["Cycle"].count(3) == 2
+assert CycleSeq["Cycle"].count(4) == 6
+assert CycleSeq["Cycle"].count(5) == 24
