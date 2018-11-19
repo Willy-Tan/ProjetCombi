@@ -186,6 +186,8 @@ assert TreeLabelNodes["Tree"].count(4) == 336 # 14 * 24
 
 assert len(TreeLabelNodes["Tree"].list(["a","b","c"])) == 30
 
+## Grammaires ajoutées
+
 ### Séquences cycliques
 
 CycleSeq = {
@@ -210,3 +212,20 @@ assert CycleSeq["Cycle"].count(5) == 24
 assert CycleSeq["Cycle"].list([]) == [[]]
 assert CycleSeq["Cycle"].list(["a","b"]) == [["a","b"]]
 assert CycleSeq["Cycle"].list([0,1,2,3]) == [[0,1,2,3],[0,1,3,2],[0,2,1,3],[0,2,3,1],[0,3,1,2],[0,3,2,1]]
+
+### Arbres binaires dont les feuilles sont rangées de gauche à droite
+
+SortedBinaryTree = {
+    "Tree": UnionRule("Node","Leaf"),
+    "Node": OrdProdRule("Tree","Tree",Node),
+    "Leaf":SingletonRule(Leaf)
+}
+
+
+init_grammar(SortedBinaryTree)
+assert SortedBinaryTree["Tree"].count(0) == 0
+assert SortedBinaryTree["Tree"].count(1) == 1
+assert SortedBinaryTree["Tree"].count(2) == 1
+assert SortedBinaryTree["Tree"].count(3) == 2
+assert SortedBinaryTree["Tree"].count(4) == 5
+assert SortedBinaryTree["Tree"].count(5) == 14
