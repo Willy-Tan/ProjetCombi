@@ -242,7 +242,8 @@ assert SortedBinaryTree["Tree"].count(5) == 14
 ### Arbres binaires croissants
 
 
-#On
+#On reprend la définition des arbres binaires aux noeuds étiquetés, et on 
+#impose un produit ordonné sur les noeuds.
 IncreasingBinaryTree = {
     "Tree" : UnionRule("Node", "Leaf"),
     "Node" : OrdProdRule("Label","Subtrees", lambda l,t: Node(t[0],t[1],l)),
@@ -277,6 +278,8 @@ assert BinarySearchTree["Tree"].count(3) == 5
 assert BinarySearchTree["Tree"].count(4) == 14
 assert BinarySearchTree["Tree"].count(5) == 42
 
+###Partitions d'ensemble
+
 Partition = {
     "Partition" : UnionRule("Empty", "Seq"),
     "Seq" : BoxProdRule("Element", "Partition", lambda l1,l2:[l1]+l2),
@@ -286,9 +289,12 @@ Partition = {
     "Empty" : EpsilonRule([])
 }
 init_grammar(Partition)
+
 assert Partition["Partition"].count(0) == 1
 assert Partition["Partition"].count(1) == 1
 assert Partition["Partition"].count(2) == 2
 assert Partition["Partition"].count(3) == 5
 assert Partition["Partition"].count(4) == 15
 assert Partition["Partition"].count(5) == 52
+assert Partition["Partition"].list([1,2,3]) == [[[1], [2], [3]], [[1], [2, 3]], [[1, 2], [3]], [[1, 3], [2]], [[1, 2, 3]]]
+
