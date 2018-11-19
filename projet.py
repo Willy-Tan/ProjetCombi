@@ -1,4 +1,5 @@
 import math
+from random import randint
 
 #---Fonctions auxiliaires---
 
@@ -12,7 +13,6 @@ def binomial(n,k):
     
     if k == 0 or k == n:
         return 1
-    
     elif 0 < k < n:
         num = 1
         den = 1
@@ -21,7 +21,6 @@ def binomial(n,k):
             den *= i
     
         return num//den
-    
     else:
         return 0
 
@@ -37,15 +36,12 @@ def permutations(elements):
             for i in range(len(elements)):
                 yield perm[:i] + elements[0:1] + perm[i:]
 
+
 #---Corps du sujet---
-
-
 class AbstractRule():
     """
     Classe abstraite pour tous les ensembles engendrés par une grammaire.
     """
-
-
     def __init__(self):
         """
         Méthode d'initialisation pour tous les ensembles
@@ -63,6 +59,11 @@ class AbstractRule():
     def unrank(self, S, i):
         if (i >= self.count(len(S))):
             raise ValueError
+            
+    def random(self, S):
+        i = randint(0, self.count(len(S)))
+        return self.unrank(S, i)
+
         
 
 class ConstantRule(AbstractRule):
