@@ -190,6 +190,11 @@ assert len(TreeLabelNodes["Tree"].list(["a","b","c"])) == 30
 
 ### Séquences cycliques
 
+
+#Les séquences cycliques sont les permutations avec le premier élément fixé.
+#On crée donc la première règle, union des mots vides et des mots non vides;
+#Pour les mots non vides, on boxe le premier élément, et on le suit de la 
+#grammaire générant les permutations en s'inspirant de l'exemple.
 CycleSeq = {
     "Cycle": UnionRule("Empty","NonEmptyCycle"),
     "NonEmptyCycle": BoxProdRule("Letter","Perms", lambda l1,l2: l1+l2),
@@ -215,6 +220,10 @@ assert CycleSeq["Cycle"].list([0,1,2,3]) == [[0,1,2,3],[0,1,3,2],[0,2,1,3],[0,2,
 
 ### Arbres binaires dont les feuilles sont rangées de gauche à droite
 
+
+#On reprend la définition des arbres aux feuilles étiquetées.
+#On a juste à appliquer un produit cartésien ordonné aux noeuds pour ordonner
+#les feuilles.
 SortedBinaryTree = {
     "Tree": UnionRule("Node","Leaf"),
     "Node": OrdProdRule("Tree","Tree",Node),
@@ -233,6 +242,7 @@ assert SortedBinaryTree["Tree"].count(5) == 14
 ### Arbres binaires croissants
 
 
+#On
 IncreasingBinaryTree = {
     "Tree" : UnionRule("Node", "Leaf"),
     "Node" : OrdProdRule("Label","Subtrees", lambda l,t: Node(t[0],t[1],l)),
