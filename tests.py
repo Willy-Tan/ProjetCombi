@@ -261,6 +261,10 @@ assert IncreasingBinaryTree["Tree"].count(4) == 24
 assert IncreasingBinaryTree["Tree"].count(5) == 120
 
 ### Arbres binaires de recherche
+
+# Il s'agit des arbres dont les noeuds sont étiquetés
+# par un ensemble ordonné donné tels que l’étiquette d’un noeud soit toujours supérieure
+# à toutes les étiquettes de son fils gauche et inférieure à toutes les étiquettes de son fils droit.
 BinarySearchTree = {
     "Tree" : UnionRule("Node", "Leaf"),
     "Node" : OrdProdRule("Tree","RightTree", lambda left,right: Node(left,right[1],right[0])),
@@ -280,6 +284,8 @@ assert BinarySearchTree["Tree"].count(5) == 42
 
 ###Partitions d'ensemble
 
+# Les partitions d’ensemble sont toutes les façons de découper
+# S en sous ensembles.
 Partition = {
     "Partition" : UnionRule("Empty", "Seq"),
     "Seq" : BoxProdRule("Element", "Partition", lambda l1,l2:[l1]+l2),
@@ -297,4 +303,3 @@ assert Partition["Partition"].count(3) == 5
 assert Partition["Partition"].count(4) == 15
 assert Partition["Partition"].count(5) == 52
 assert Partition["Partition"].list([1,2,3]) == [[[1], [2], [3]], [[1], [2, 3]], [[1, 2], [3]], [[1, 3], [2]], [[1, 2, 3]]]
-
