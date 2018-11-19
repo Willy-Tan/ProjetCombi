@@ -248,3 +248,37 @@ assert IncreasingBinaryTree["Tree"].count(2) == 2
 assert IncreasingBinaryTree["Tree"].count(3) == 6
 assert IncreasingBinaryTree["Tree"].count(4) == 24
 assert IncreasingBinaryTree["Tree"].count(5) == 120
+
+### Arbres binaires de recherches
+BinarySearchTree = {
+    "Tree" : UnionRule("Node", "Leaf"),
+    "Node" : OrdProdRule("Tree","RightTree", lambda left,right: Node(left,right[1],right[0])),
+    "RightTree": OrdProdRule("Label", "Tree", lambda l, t: (l,t)),
+    "Label" : SingletonRule(lambda x:x),
+    "Leaf" : EpsilonRule(Leaf())
+}
+
+
+init_grammar(BinarySearchTree)
+assert BinarySearchTree["Tree"].count(0) == 1
+assert BinarySearchTree["Tree"].count(1) == 1
+assert BinarySearchTree["Tree"].count(2) == 2
+assert BinarySearchTree["Tree"].count(3) == 5
+assert BinarySearchTree["Tree"].count(4) == 14
+assert BinarySearchTree["Tree"].count(5) == 42
+
+Partition = {
+    "Partition" : UnionRule("Empty", "Seq"),
+    "Seq" : BoxProdRule("Element", "Partition", lambda l1,l2:[l1]+l2),
+    "Element": UnionRule("Elt", "Empty"),
+    "Elt" : BoxProdRule("Atom", "Element", lambda l1,l2:l1+l2),
+    "Atom" : SingletonRule(lambda x:[x]),
+    "Empty" : EpsilonRule([])
+}
+init_grammar(Partition)
+assert Partition["Partition"].count(0) == 1
+assert Partition["Partition"].count(1) == 1
+assert Partition["Partition"].count(2) == 2
+assert Partition["Partition"].count(3) == 5
+assert Partition["Partition"].count(4) == 15
+assert Partition["Partition"].count(5) == 52
