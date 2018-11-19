@@ -1,5 +1,7 @@
 import math
 
+#---Fonctions auxiliaires---
+
 def binomial(n,k):
     """
     Fonction auxiliaire pour calculer un coefficient binomial.
@@ -8,16 +10,32 @@ def binomial(n,k):
     - au dénominateur, n-k termes : (n-k)! = 1 x 2 x .... x (n - k)!   
     """
     
-    if 0 <= k <= n:
+    if k == 0 or k == n:
+        return 1
+    
+    elif 0 < k < n:
         num = 1
         den = 1
-        for i in range(1, n-k+1):
-            num *= n-i+1
+        for i in range(1,n-k+1):
+            num = num * (k+i)
             den *= i
     
-    return n//k
+    return num//den
 
-            
+
+def permutations(elements):
+    """
+    Fonction auxiliaire pour générer les permutations d'une liste d'éléments
+    """
+    if len(elements)<=1:
+        yield elements
+    else:
+        for perm in permutations(elements[1:]):
+            for i in range(len(elements)):
+                yield perm[:i] + elements[0:1] + perm[i:]
+
+#---Corps du sujet---
+
 
 class AbstractRule():
     """
@@ -171,6 +189,13 @@ class UnionRule(ConstructorRule):
         fst,snd = self.parameters()
         return self._gram[fst].count(n) + self._gram[snd].count(n)
 
+    def list(self, l):
+        fst, snd = self.parameters()
+        l1 = self._gram[fst].list(l)    #Liste des objets étiquetés par l dans N1
+        l2 = self._gram[snd].list(l)    #Liste des objets étiquetés par l dans N2
+        return l1 + l2
+
+
 class AbstractProductRule(ConstructorRule):
     """
     Représente un ensemble produit de deux autres ensembles
@@ -193,7 +218,23 @@ class AbstractProductRule(ConstructorRule):
 
     def construct(self, obj1, obj2):
         return self._cons(*(obj1,obj2))
-
+    
+    def iter_label(self,l,k):
+        yield [],[]
+    
+        
+    def list(self,l):
+        objects = []
+        fst, snd = self.parameters()
+        fstVal = self._gram[fst].valuation()
+        sndVal = self._gram[snd].valuation()
+        n = len(l)
+        for k in range(fstVal,n-sndVal+1):
+            for left,right in self.iter_label(l,k):
+                for e1 in self._gram[fst].list(left):
+                    for e2 in self._gram[snd].list(right):
+                        objects.append(self.construct(e1,e2))
+        return objects
 
 
 class OrdProdRule(AbstractProductRule):
@@ -204,20 +245,25 @@ class OrdProdRule(AbstractProductRule):
         return "Ordered Product of " + str(self.parameters())
     
     def count(self, n):
-        #Si n est plus grand que la valuation de la règle, pas d'objet possible
-        if n > self.valuation():
-            return 0
         result = 0
         fst,snd = self.parameters()
         fstVal = self._gram[fst].valuation()    #V(N1)
         sndVal = self._gram[snd].valuation()    #V(N2)
         
-        #On ne considère que les termes où k >= V(N1) et n-k >= V(N2)
-        for k in range(fstVal, n+1):
-            if (n - k) >= sndVal:
+        #On ne considère que les termes où k >= V(N1) et n-k >= V(N2) (ie k <= V(N2)-k)
+        for k in range(fstVal, n-sndVal+1):
                 result += self._gram[fst].count(k) * self._gram[snd].count(n-k)
         return result
 
+    def iter_label(self, l, k):
+        """
+        Renvoie les découpages de la liste l en k éléments d'un côté et n - k de l'autre
+        Pour un produit ordonné, un seul découpage pour un k donné.
+        """
+        if k > len(l):
+            raise ValueError
+        yield l[:k],l[k:]
+        
 class ProductRule(AbstractProductRule):
     """
     Représente un ensemble produit de deux autres ensembles
@@ -227,20 +273,41 @@ class ProductRule(AbstractProductRule):
         return "Product of " + str(self.parameters())
     
     def count(self, n):
-        #Si n est plus grand que la valuation de la règle, pas d'objet possible
-        if n > self.valuation():
-            return 0
-
+        
         result = 0
         fst,snd = self.parameters()
         fstVal = self._gram[fst].valuation()    #V(N1)
         sndVal = self._gram[snd].valuation()    #V(N2)
         
-        #On ne considère que les termes où k >= V(N1) et n-k >= V(N2)
-        for k in range(fstVal, n+1):
-            if (n - k) >= sndVal:
-                result += binomial(n,k) * self._gram[fst].count(k) * self._gram[snd].count(n-k)
+        #On ne considère que les termes où k >= V(N1) et n-k >= V(N2) (ie k <= n-V(N2))
+        for k in range(fstVal, n-sndVal+1):
+            result += binomial(n,k) * self._gram[fst].count(k) * self._gram[snd].count(n-k)
         return result
+        
+    
+    def iter_label(self,l, k):
+        """
+        Renvoie les découpages de la liste l en k éléments d'un côté et n - k de l'autre.
+        On utilise la fonction qui génère toutes les permutations ci-dessus, on produit ensuite
+        toutes les permutations d'indices possibles, on réordonne la liste initiale
+        selon les indices donnés et on coupe à k.
+        """
+       
+        #Si k est plus grand que n, on ne produit rien
+        n = len(l)
+        
+        if k > n:
+            return
+        
+        #On génère toutes les permutations des indices jusqu'à n
+        for indices in permutations(list(range(n))):
+            #On filtre les permutations non ordonnées afin d'éviter les répétitions 
+            if sorted(indices[:k]) == indices[:k] and sorted(indices[k:]) == indices[k:]:
+                left = indices[:k]
+                right = indices[k:]
+                yield [l[x] for x in left], [l[x] for x in right]
+        
+
         
 class BoxProdRule(AbstractProductRule):
     """
@@ -252,17 +319,38 @@ class BoxProdRule(AbstractProductRule):
         return "Boxed Product of " + str(self.parameters())
     
     def count(self, n):
-        #Si n est supérieur à la valuation de la règle, pas d'objet possible
-        if n > self.valuation():
-            return 0
             
         result = 0
         fst,snd = self.parameters()
         fstVal = max(1, self._gram[fst].valuation())
         sndVal = self._gram[snd].valuation()
-        for k in range(val, n+1):
+        for k in range(fstVal, n-sndVal+1):
             result += binomial(n-1,k-1) * self._gram[fst].count(k) * self._gram[snd].count(n-k)
         return result
+        
+    def iter_label(self,l,k):
+        
+        n = len(l)
+        if k > n or l == [] or k == 0:
+            return
+    
+        #On récupère l'indice de l'élément le plus petit
+        mini = l.index(min(l))
+    
+        #On génère toutes les permutations des indices jusqu'à n privé de l'indice
+        listeInit = list(range(n))
+        listeInit.remove(mini)
+        for indices in permutations(listeInit):
+            
+            #On filtre les permutations non ordonnées afin d'éviter les répétitions
+            #On fait attention au k qui devient k-1 (premier élément fixé) 
+            if sorted(indices[:k-1]) == indices[:k-1] and sorted(indices[k-1:]) == indices[k-1:]:
+                left = indices[:k-1]
+                right = indices[k-1:]
+                #On n'oublie pas d'ajouter le plus petit élément à gauche
+                yield [l[mini]]+[l[x] for x in left], [l[x] for x in right]
+    
+
         
         
 def save_grammar(gram):
