@@ -91,3 +91,7 @@ Les méthodes des classes combinatoires doivent vérifier un certain nombre de p
 - len(self.list(S)) == self.count(len(S))
 - self.unrank(S, i) appartient à self.list(S) si i appartient à [0, self.count(len(S)) - 1]
 - self.random(S) appartient à self.list(S)
+
+### Caching
+Un moyen d'économiser de la compléxité est d'utiliser des tableaux où on stocke les calculs déjà effectués afin de ne pas le faire plusieurs fois. Ce phénomène de caching est présent dans :
+- la méthode **unrank(self, S, i)** dans les classes dérivant AbstractProductRule

@@ -267,6 +267,8 @@ class AbstractProductRule(ConstructorRule):
         s_max = 0
         r = 0
         n = len(S)
+        cachingFst = [-1 for i in range(n+1)]
+        cachingSnd = [-1 for i in range(n+1)]
         """
         Calcul de l'indice i tel que S_i <= r < S_i+1
         """
@@ -277,7 +279,11 @@ class AbstractProductRule(ConstructorRule):
                 r += 1
                 S_r = 0
                 for j in range(r):
-                    S_r += self.valProd(n, j) * self._gram[fst].count(j) * self._gram[snd].count(n-j)
+                    if (cachingFst[j] == -1):
+                        cachingFst[j] = self._gram[fst].count(j)
+                    if (cachingSnd[n-j] == -1):
+                        cachingSnd[n-j] = self._gram[snd].count(n-j)
+                    S_r += self.valProd(n, j) * cachingFst[j] * cachingSnd[n-j]
                 s_min = s_max
                 s_max = S_r
         r = r - 1
@@ -285,10 +291,10 @@ class AbstractProductRule(ConstructorRule):
         Calcul de la répartition des étiquettes entre A et B
         """
         r2 = i - s_min
-        nbSol = self._gram[fst].count(r) * self._gram[snd].count(n-r)
+        nbSol = cachingFst[r] * cachingSnd[n-r]
         qE = r2 // nbSol
         rE = r2 % nbSol
-        nG = self._gram[snd].count(n-r)
+        nG = cachingSnd[n-r]
         F,G = list(self.iter_label(S, r))[qE]
         Q = rE // nG
         R = rE % nG
@@ -307,10 +313,10 @@ class OrdProdRule(AbstractProductRule):
         fst,snd = self.parameters()
         fstVal = self._gram[fst].valuation()    #V(N1)
         sndVal = self._gram[snd].valuation()    #V(N2)
-        
+
         #On ne considère que les termes où k >= V(N1) et n-k >= V(N2) (ie k <= V(N2)-k)
         for k in range(fstVal, n-sndVal+1):
-                result += self._gram[fst].count(k) * self._gram[snd].count(n-k)
+            result += self._gram[fst].count(k) * self._gram[snd].count(n-k)
         return result
     
     def valProd(self, n, k):
